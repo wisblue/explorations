@@ -100,7 +100,6 @@ async def javascript(request):
 
 
 async def offer(request):
-    # received JSON payload is parsed to obtain the offer sent from the frontend
     params = await request.json()
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
@@ -120,6 +119,10 @@ async def offer(request):
     else:
         recorder = MediaBlackhole()
 
+    # A datachannel event is sent to an RTCPeerConnection instance 
+    # when an RTCDataChannel has been added to the connection, 
+    # as a result of the remote peer calling RTCPeerConnection.createDataChannel().
+    # ref: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/datachannel_event
     @pc.on("datachannel")
     def on_datachannel(channel):
         @channel.on("message")
@@ -134,9 +137,13 @@ async def offer(request):
             await pc.close()
             pcs.discard(pc)
 
+    # The track event is sent to the ontrack event handler on RTCPeerConnections 
+    # after a new track has been added to an RTCRtpReceiver which is part of the connection.
+    # By the time this event is delivered, the new track has been fully added to the peer connection.
+    # See Track event types for details
+    # ref: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/track_event
     @pc.on("track")
     def on_track(track):
-        # the new track has been fully added to the peer
         log_info("Track %s received", track.kind)
 
         if track.kind == "audio":
@@ -191,7 +198,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port", type=int, default=8080, help="Port for HTTP server (default: 8080)"
     )
-    parser.add_argument("--record-to", help="Write received media to a file."),
+    parser.add_argument("--record-to", help="Write received media to a file.")
     parser.add_argument("--verbose", "-v", action="count")
     args = parser.parse_args()
 
